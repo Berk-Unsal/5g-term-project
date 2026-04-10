@@ -1,0 +1,730 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open5gs-config
+  namespace: {{ .Values.namespace }}
+data:
+  nrf.yaml: |
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+    nrf:
+      sbi:
+        - addr: 0.0.0.0
+          port: 7777
+  amf.yaml: |
+    logger:
+      level: info
+    amf:
+      sbi:
+        - addr: 0.0.0.0
+          port: 7777
+      ngap:
+        - addr: 0.0.0.0
+      guami:
+        - plmn_id:
+            mcc: {{ .Values.subscriber.mcc | quote }}
+            mnc: {{ .Values.subscriber.mnc | quote }}
+          amf_id:
+            region: 2
+            set: 1
+      tai:
+        - plmn_id:
+            mcc: {{ .Values.subscriber.mcc | quote }}
+            mnc: {{ .Values.subscriber.mnc | quote }}
+          tac: {{ .Values.subscriber.tac | quote }}
+      plmn_support:
+        - plmn_id:
+            mcc: {{ .Values.subscriber.mcc | quote }}
+            mnc: {{ .Values.subscriber.mnc | quote }}
+          s_nssai:
+            - sst: {{ .Values.subscriber.sst }}
+              sd: {{ .Values.subscriber.sd | quote }}
+      security:
+        integrity_order: [ NIA2, NIA1, NIA0 ]
+        ciphering_order: [ NEA0, NEA1, NEA2 ]
+      network_name:
+        full: Open5GS
+      amf_name: open5gs-amf
+      time:
+        t3502:
+          value: 720
+        t3512:
+          value: 540
+      nrf:
+        - uri: http://nrf:7777
+  smf.yaml: |
+    logger:
+      level: info
+    smf:
+      sbi:
+        - addr: 0.0.0.0
+          port: 7777
+      pfcp:
+        - addr: 0.0.0.0
+      gtpu:
+        - addr: 0.0.0.0
+      subnet:
+        - addr: 10.45.0.1/16
+          dnn: {{ .Values.subscriber.dnn | quote }}
+      dns:
+        - 8.8.8.8
+      mtu: 1400
+      ctf:
+        enabled: no
+      freeDiameter: /open5gs/install/etc/freeDiameter/smf.conf
+      nrf:
+        - uri: http://nrf:7777
+      upf:
+        - addr: upf
+  upf.yaml: |
+    logger:
+      level: info
+    upf:
+      pfcp:
+        - addr: 0.0.0.0
+      gtpu:
+        - addr: 0.0.0.0
+      session:
+        - subnet: 10.45.0.1/16
+          dnn: {{ .Values.subscriber.dnn | quote }}
+      smf:
+        - addr: smf
+  ausf.yaml: |
+    logger:
+      level: info
+    ausf:
+      sbi:
+        - addr: 0.0.0.0
+          port: 7777
+      nrf:
+        - uri: http://nrf:7777
+  udm.yaml: |
+    logger:
+      level: info
+    udm:
+      sbi:
+        - addr: 0.0.0.0
+          port: 7777
+      nrf:
+        - uri: http://nrf:7777
+  udr.yaml: |
+    logger:
+      level: info
+    udr:
+      sbi:
+        - addr: 0.0.0.0
+          port: 7777
+      mongodb:
+        uri: mongodb://mongodb/open5gs
+      nrf:
+        - uri: http://nrf:7777
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ueransim-config
+  namespace: {{ .Values.namespace }}
+data:
+  gnb.yaml: |
+    mcc: '{{ .Values.subscriber.mcc }}'
+    mnc: '{{ .Values.subscriber.mnc }}'
+    nci: '0x000000010'
+    idLength: 32
+    tac: {{ .Values.subscriber.tac }}
+    linkIp: 127.0.0.1
+    ngapIp: 0.0.0.0
+    gtpIp: 0.0.0.0
+    amfConfigs:
+      - address: amf
+        port: 38412
+    slices:
+      - sst: {{ .Values.subscriber.sst }}
+        sd: {{ .Values.subscriber.sd }}
+  ue.yaml: |
+    supi: 'imsi-{{ .Values.subscriber.imsi }}'
+    mcc: '{{ .Values.subscriber.mcc }}'
+    mnc: '{{ .Values.subscriber.mnc }}'
+    key: '{{ .Values.subscriber.key }}'
+    op: '00000000000000000000000000000000'
+    opc: '{{ .Values.subscriber.opc }}'
+    amf: '8000'
+    imei: '356938035643803'
+    imeiSv: '4370816125816151'
+    gnbSearchList:
+      - gnb
+    uacAic:
+      mps: false
+      mcs: false
+    uacAcc:
+      normalClass: 0
+      class11: false
+      class12: false
+      class13: false
+      class14: false
+      class15: false
+    sessions:
+      - type: IPv4
+        apn: {{ .Values.subscriber.dnn }}
+        slice:
+          sst: {{ .Values.subscriber.sst }}
+          sd: {{ .Values.subscriber.sd }}
+    configuredNssai:
+      - sst: {{ .Values.subscriber.sst }}
+        sd: {{ .Values.subscriber.sd }}
+    defaultNssai:
+      - sst: {{ .Values.subscriber.sst }}
+        sd: {{ .Values.subscriber.sd }}
+    integrity:
+      IA1: true
+      IA2: true
+      IA3: true
+    ciphering:
+      EA1: true
+      EA2: true
+      EA3: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: {{ .Values.images.mongodb }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 27017
+          resources:
+{{ toYaml .Values.resources.small | indent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: subscriber-bootstrap
+  namespace: {{ .Values.namespace }}
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: {{ .Values.images.mongodb }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cat <<'EOF' >/tmp/subscriber.js
+              db = db.getSiblingDB('open5gs');
+              db.subscribers.updateOne(
+                { "imsi": "{{ .Values.subscriber.imsi }}" },
+                {
+                  "$set": {
+                    "imsi": "{{ .Values.subscriber.imsi }}",
+                    "subscribed_rau_tau_timer": 12,
+                    "network_access_mode": 0,
+                    "subscriber_status": 0,
+                    "access_restriction_data": 32,
+                    "slice": [{
+                      "sst": {{ .Values.subscriber.sst }},
+                      "sd": "{{ .Values.subscriber.sd }}",
+                      "default_indicator": true,
+                      "session": [{
+                        "name": "{{ .Values.subscriber.dnn }}",
+                        "type": 3,
+                        "pcc_rule": [],
+                        "ambr": {"uplink": {"value": 1, "unit": 3}, "downlink": {"value": 1, "unit": 3}},
+                        "qos": {"index": 9, "arp": {"priority_level": 8, "pre_emption_capability": 1, "pre_emption_vulnerability": 1}}
+                      }]
+                    }],
+                    "ambr": {"uplink": {"value": 1, "unit": 3}, "downlink": {"value": 1, "unit": 3}},
+                    "security": {
+                      "k": "{{ .Values.subscriber.key }}",
+                      "amf": "8000",
+                      "op": null,
+                      "opc": "{{ .Values.subscriber.opc }}"
+                    },
+                    "schema_version": 1,
+                    "__v": 0
+                  }
+                },
+                { upsert: true }
+              );
+              EOF
+              mongosh "mongodb://mongodb:27017/open5gs" /tmp/subscriber.js
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nrf
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: nrf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nrf
+  template:
+    metadata:
+      labels:
+        app: nrf
+    spec:
+      containers:
+        - name: nrf
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-nrfd -c /open5gs/nrf.yaml"]
+          ports:
+            - containerPort: 7777
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/nrf.yaml
+              subPath: nrf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nrf
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: nrf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udr
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: udr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udr
+  template:
+    metadata:
+      labels:
+        app: udr
+    spec:
+      containers:
+        - name: udr
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-udrd -c /open5gs/udr.yaml"]
+          ports:
+            - containerPort: 7777
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/udr.yaml
+              subPath: udr.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: udr
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: udr
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udm
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: udm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udm
+  template:
+    metadata:
+      labels:
+        app: udm
+    spec:
+      containers:
+        - name: udm
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-udmd -c /open5gs/udm.yaml"]
+          ports:
+            - containerPort: 7777
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/udm.yaml
+              subPath: udm.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: udm
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: udm
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ausf
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: ausf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ausf
+  template:
+    metadata:
+      labels:
+        app: ausf
+    spec:
+      containers:
+        - name: ausf
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-ausfd -c /open5gs/ausf.yaml"]
+          ports:
+            - containerPort: 7777
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/ausf.yaml
+              subPath: ausf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ausf
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: ausf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amf
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: amf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: amf
+  template:
+    metadata:
+      labels:
+        app: amf
+    spec:
+      containers:
+        - name: amf
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-amfd -c /open5gs/amf.yaml"]
+          ports:
+            - containerPort: 7777
+            - containerPort: 38412
+              protocol: SCTP
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/amf.yaml
+              subPath: amf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: amf
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: amf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+    - name: ngap
+      port: 38412
+      protocol: SCTP
+      targetPort: 38412
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upf
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: upf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: upf
+  template:
+    metadata:
+      labels:
+        app: upf
+    spec:
+      containers:
+        - name: upf
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-upfd -c /open5gs/upf.yaml"]
+          ports:
+            - containerPort: 8805
+              protocol: UDP
+            - containerPort: 2152
+              protocol: UDP
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/upf.yaml
+              subPath: upf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: upf
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: upf
+  ports:
+    - name: pfcp
+      port: 8805
+      targetPort: 8805
+      protocol: UDP
+    - name: gtpu
+      port: 2152
+      targetPort: 2152
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smf
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: smf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smf
+  template:
+    metadata:
+      labels:
+        app: smf
+    spec:
+      containers:
+        - name: smf
+          image: {{ .Values.images.open5gs }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-smfd -c /open5gs/smf.yaml"]
+          ports:
+            - containerPort: 7777
+            - containerPort: 8805
+              protocol: UDP
+            - containerPort: 2152
+              protocol: UDP
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/smf.yaml
+              subPath: smf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smf
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: smf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+    - name: pfcp
+      port: 8805
+      targetPort: 8805
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: gnb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb
+  template:
+    metadata:
+      labels:
+        app: gnb
+    spec:
+{{- if .Values.network.hostNetworkForRan }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+{{- end }}
+      containers:
+        - name: gnb
+          image: {{ .Values.images.ueransim }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["nr-gnb -c /ueransim/gnb.yaml"]
+          volumeMounts:
+            - name: config
+              mountPath: /ueransim/gnb.yaml
+              subPath: gnb.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: ueransim-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: gnb
+  ports:
+    - name: ngap
+      port: 38412
+      protocol: SCTP
+      targetPort: 38412
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: ue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ue
+  template:
+    metadata:
+      labels:
+        app: ue
+    spec:
+{{- if .Values.network.hostNetworkForRan }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+{{- end }}
+      containers:
+        - name: ue
+          image: {{ .Values.images.ueransim }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          command: ["/bin/sh", "-c"]
+          args: ["nr-ue -c /ueransim/ue.yaml"]
+          volumeMounts:
+            - name: config
+              mountPath: /ueransim/ue.yaml
+              subPath: ue.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: ueransim-config

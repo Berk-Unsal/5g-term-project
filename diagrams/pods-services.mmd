@@ -1,0 +1,32 @@
+flowchart LR
+  subgraph NS[Namespace: 5g-core]
+    MDB[(MongoDB)]
+    JOB[subscriber-bootstrap Job]
+
+    NRF[NRF Pod]
+    AMF[AMF Pod]
+    SMF[SMF Pod]
+    UPF[UPF Pod]
+    UDR[UDR Pod]
+    UDM[UDM Pod]
+    AUSF[AUSF Pod]
+
+    GNB[gNB Pod]
+    UE[UE Pod]
+  end
+
+  JOB --> MDB
+
+  UDR --> MDB
+  NRF <--> AMF
+  NRF <--> SMF
+  NRF <--> UDR
+  NRF <--> UDM
+  NRF <--> AUSF
+
+  AMF <-- NGAP/SCTP --> GNB
+  GNB <-- RRC/NAS (sim) --> UE
+
+  SMF <-- PFCP/UDP --> UPF
+  UE -. PDU Session .-> SMF
+  UE -. User Plane .-> UPF
