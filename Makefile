@@ -1,7 +1,7 @@
-.PHONY: test deploy check teardown
+.PHONY: test tests deploy check teardown
 
-test:
-	pytest -q
+test tests:
+	python3 -m pytest -q
 
 deploy:
 	bash scripts/deploy.sh
