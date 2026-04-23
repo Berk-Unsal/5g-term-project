@@ -17,17 +17,27 @@ data:
         ue: 1024
     nrf:
       sbi:
-        - addr: 0.0.0.0
-          port: 7777
+        server:
+          - address: 0.0.0.0
+            port: 7777
   amf.yaml: |
     logger:
       level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
     amf:
       sbi:
-        - addr: 0.0.0.0
-          port: 7777
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
       ngap:
-        - addr: 0.0.0.0
+        server:
+          - address: 0.0.0.0
       guami:
         - plmn_id:
             mcc: {{ .Values.subscriber.mcc | quote }}
@@ -58,19 +68,27 @@ data:
           value: 720
         t3512:
           value: 540
-      nrf:
-        - uri: http://nrf:7777
   smf.yaml: |
     logger:
       level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
     smf:
       sbi:
-        - addr: 0.0.0.0
-          port: 7777
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
       pfcp:
-        - addr: 0.0.0.0
+        server:
+          - address: 0.0.0.0
       gtpu:
-        - addr: 0.0.0.0
+        server:
+          - address: 0.0.0.0
       subnet:
         - addr: 10.45.0.1/16
           dnn: {{ .Values.subscriber.dnn | quote }}
@@ -80,52 +98,74 @@ data:
       ctf:
         enabled: no
       freeDiameter: /open5gs/install/etc/freeDiameter/smf.conf
-      nrf:
-        - uri: http://nrf:7777
       upf:
-        - addr: upf
+        - address: upf
   upf.yaml: |
     logger:
       level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
     upf:
       pfcp:
-        - addr: 0.0.0.0
+        server:
+          - address: 0.0.0.0
       gtpu:
-        - addr: 0.0.0.0
+        server:
+          - address: 0.0.0.0
       session:
         - subnet: 10.45.0.1/16
           dnn: {{ .Values.subscriber.dnn | quote }}
       smf:
-        - addr: smf
+        - address: smf
   ausf.yaml: |
     logger:
       level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
     ausf:
       sbi:
-        - addr: 0.0.0.0
-          port: 7777
-      nrf:
-        - uri: http://nrf:7777
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
   udm.yaml: |
     logger:
       level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
     udm:
       sbi:
-        - addr: 0.0.0.0
-          port: 7777
-      nrf:
-        - uri: http://nrf:7777
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
   udr.yaml: |
     logger:
       level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
     udr:
       sbi:
-        - addr: 0.0.0.0
-          port: 7777
+        server:
+          - address: 0.0.0.0
+            port: 7777
       mongodb:
         uri: mongodb://mongodb/open5gs
-      nrf:
-        - uri: http://nrf:7777
+      client:
+        nrf:
+          - uri: http://nrf:7777
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -155,6 +195,7 @@ data:
     key: '{{ .Values.subscriber.key }}'
     op: '00000000000000000000000000000000'
     opc: '{{ .Values.subscriber.opc }}'
+    opType: 'OPC'
     amf: '8000'
     imei: '356938035643803'
     imeiSv: '4370816125816151'

@@ -50,6 +50,13 @@ def test_template_includes_critical_ports_and_protocols():
     assert "port: 2152" in content
 
 
+def test_template_includes_current_config_schema_markers():
+    content = (CHART / "templates" / "stack.yaml").read_text()
+    assert "opType: 'OPC'" in content
+    assert "server:" in content
+    assert "client:" in content
+
+
 def test_template_includes_hostnetwork_toggle_for_ran():
     content = (CHART / "templates" / "stack.yaml").read_text()
     assert "hostNetworkForRan" in (CHART / "values.yaml").read_text()
