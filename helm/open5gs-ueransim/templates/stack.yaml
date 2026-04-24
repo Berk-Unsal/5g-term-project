@@ -84,8 +84,8 @@ data:
       gtpu:
         server:
           - address: 0.0.0.0
-      subnet:
-        - addr: 10.45.0.1/16
+      session:
+        - subnet: 10.45.0.1/16
           dnn: {{ .Values.subscriber.dnn | quote }}
       dns:
         - 8.8.8.8
@@ -152,15 +152,14 @@ data:
         ue: 1024
         peer: 64
     udr:
+      db_uri: mongodb://mongodb/open5gs
       sbi:
         server:
           - address: 0.0.0.0
             port: 7777
-      mongodb:
-        uri: mongodb://mongodb/open5gs
-      client:
-        nrf:
-          - uri: http://nrf:7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -177,6 +176,7 @@ data:
     linkIp: 127.0.0.1
     ngapIp: 0.0.0.0
     gtpIp: 0.0.0.0
+    ignoreStreamIds: true
     amfConfigs:
       - address: amf
         port: 38412
@@ -212,6 +212,9 @@ data:
         slice:
           sst: {{ .Values.subscriber.sst }}
           sd: {{ .Values.subscriber.sd }}
+    integrityMaxRate:
+      uplink: 64kbps
+      downlink: 64kbps
     configuredNssai:
       - sst: {{ .Values.subscriber.sst }}
         sd: {{ .Values.subscriber.sd }}
@@ -585,6 +588,7 @@ spec:
           image: {{ .Values.images.open5gs }}
           imagePullPolicy: IfNotPresent
           securityContext:
+            privileged: true
             capabilities:
               add: ["NET_ADMIN"]
           command: ["/bin/sh", "-c"]
@@ -595,10 +599,16 @@ spec:
             - containerPort: 2152
               protocol: UDP
           volumeMounts:
+            - name: tun-device
+              mountPath: /dev/net/tun
             - name: config
               mountPath: /open5gs/upf.yaml
               subPath: upf.yaml
       volumes:
+        - name: tun-device
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
         - name: config
           configMap:
             name: open5gs-config
