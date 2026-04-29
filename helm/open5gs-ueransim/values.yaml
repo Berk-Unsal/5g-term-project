@@ -2,7 +2,7 @@ namespace: 5g-core
 
 images:
   mongodb: mongo:6.0
-  open5gs: docker.io/gradiant/open5gs:2.7.0
+  open5gs: docker.io/open5gs/open5gs:latest
   ueransim: docker.io/gradiant/ueransim:3.2.6
 
 resources:

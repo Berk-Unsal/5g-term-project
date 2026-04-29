@@ -92,7 +92,6 @@ data:
       mtu: 1400
       ctf:
         enabled: no
-      freeDiameter: /open5gs/install/etc/freeDiameter/smf.conf
       upf:
         - address: upf
   upf.yaml: |
@@ -151,8 +150,9 @@ data:
       max:
         ue: 1024
         peer: 64
+      mongodb:
+        uri: mongodb://mongodb/open5gs
     udr:
-      db_uri: mongodb://mongodb/open5gs
       sbi:
         server:
           - address: 0.0.0.0
@@ -631,6 +631,19 @@ spec:
       targetPort: 2152
       protocol: UDP
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freediameter-config
+  namespace: {{ .Values.namespace }}
+data:
+  smf.conf: |
+    # Minimal freeDiameter configuration for Open5GS SMF
+    ListenOn = "127.0.0.1";
+    Port = 3868;
+    TLS_Port = 5868;
+    NoTLS;
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -648,12 +661,26 @@ spec:
       labels:
         app: smf
     spec:
+      initContainers:
+        - name: setup-freediameter
+          image: busybox:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              mkdir -pv /etc/freeDiameter
+              cp /config-src/smf.conf /etc/freeDiameter/smf.conf
+              ls -la /etc/freeDiameter/
+          volumeMounts:
+            - name: freediameter-config
+              mountPath: /config-src
+            - name: freediameter-dir
+              mountPath: /etc/freeDiameter
       containers:
         - name: smf
           image: {{ .Values.images.open5gs }}
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
-          args: ["open5gs-smfd -c /open5gs/smf.yaml"]
+          args: ["cp /etc/freeDiameter/smf.conf /open5gs/install/etc/freeDiameter/smf.conf 2>/dev/null || mkdir -p /open5gs/install/etc/freeDiameter && cp /etc/freeDiameter/smf.conf /open5gs/install/etc/freeDiameter/ && open5gs-smfd -c /open5gs/smf.yaml"]
           ports:
             - containerPort: 7777
             - containerPort: 8805
@@ -664,10 +691,17 @@ spec:
             - name: config
               mountPath: /open5gs/smf.yaml
               subPath: smf.yaml
+            - name: freediameter-dir
+              mountPath: /etc/freeDiameter
       volumes:
         - name: config
           configMap:
             name: open5gs-config
+        - name: freediameter-config
+          configMap:
+            name: freediameter-config
+        - name: freediameter-dir
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
