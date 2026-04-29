@@ -1,0 +1,909 @@
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freediameter-config
+  namespace: 5g-core
+data:
+  smf.conf: |
+    # freeDiameter minimal configuration for SMF
+    ListenOn = 127.0.0.1;
+    Port = 3868;
+    NoTLS;
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open5gs-config
+  namespace: 5g-core
+data:
+  nrf.yaml: |
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+    nrf:
+      sbi:
+        server:
+          - address: 0.0.0.0
+            port: 7777
+  amf.yaml: |
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
+    amf:
+      sbi:
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
+      ngap:
+        server:
+          - address: 0.0.0.0
+      guami:
+        - plmn_id:
+            mcc: "001"
+            mnc: "01"
+          amf_id:
+            region: 2
+            set: 1
+      tai:
+        - plmn_id:
+            mcc: "001"
+            mnc: "01"
+          tac: "1"
+      plmn_support:
+        - plmn_id:
+            mcc: "001"
+            mnc: "01"
+          s_nssai:
+            - sst: 1
+              sd: "000001"
+      security:
+        integrity_order: [ NIA2, NIA1, NIA0 ]
+        ciphering_order: [ NEA0, NEA1, NEA2 ]
+      network_name:
+        full: Open5GS
+      amf_name: open5gs-amf
+      time:
+        t3502:
+          value: 720
+        t3512:
+          value: 540
+  smf.yaml: |
+    logger:
+      level: info
+    # Leave Diameter unset so SMF can start without a freeDiameter config file.
+    global:
+      max:
+        ue: 1024
+        peer: 64
+    smf:
+      sbi:
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
+      pfcp:
+        server:
+          - address: 0.0.0.0
+      gtpu:
+        server:
+          - address: 0.0.0.0
+      session:
+        - subnet: 10.45.0.1/16
+          dnn: "internet"
+      dns:
+        - 8.8.8.8
+      mtu: 1400
+      ctf:
+        enabled: no
+      upf:
+        - address: upf
+  upf.yaml: |
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
+    upf:
+      pfcp:
+        server:
+          - address: 0.0.0.0
+      gtpu:
+        server:
+          - address: 0.0.0.0
+      session:
+        - subnet: 10.45.0.1/16
+          dnn: "internet"
+      smf:
+        - address: smf
+  ausf.yaml: |
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
+    ausf:
+      sbi:
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
+  udm.yaml: |
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
+    udm:
+      sbi:
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
+  udr.yaml: |
+    db_uri: mongodb://mongodb/open5gs
+    logger:
+      level: info
+    global:
+      max:
+        ue: 1024
+        peer: 64
+    udr:
+      sbi:
+        server:
+          - address: 0.0.0.0
+            port: 7777
+        client:
+          nrf:
+            - uri: http://nrf:7777
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ueransim-config
+  namespace: 5g-core
+data:
+  gnb.yaml: |
+    mcc: '001'
+    mnc: '01'
+    nci: '0x000000010'
+    idLength: 32
+    tac: 1
+    linkIp: 127.0.0.1
+    ngapIp: 0.0.0.0
+    gtpIp: 0.0.0.0
+    ignoreStreamIds: true
+    amfConfigs:
+      - address: amf
+        port: 38412
+    slices:
+      - sst: 1
+        sd: 000001
+  ue.yaml: |
+    supi: 'imsi-001010000000001'
+    mcc: '001'
+    mnc: '01'
+    key: '465B5CE8B199B49FAA5F0A2EE238A6BC'
+    op: '00000000000000000000000000000000'
+    opc: 'E8ED289DEBA952E4283B54E88E6183CA'
+    opType: 'OPC'
+    amf: '8000'
+    imei: '356938035643803'
+    imeiSv: '4370816125816151'
+    gnbSearchList:
+      - gnb
+    uacAic:
+      mps: false
+      mcs: false
+    uacAcc:
+      normalClass: 0
+      class11: false
+      class12: false
+      class13: false
+      class14: false
+      class15: false
+    sessions:
+      - type: IPv4
+        apn: internet
+        slice:
+          sst: 1
+          sd: 000001
+    integrityMaxRate:
+      uplink: 64kbps
+      downlink: 64kbps
+    configuredNssai:
+      - sst: 1
+        sd: 000001
+    defaultNssai:
+      - sst: 1
+        sd: 000001
+    integrity:
+      IA1: true
+      IA2: true
+      IA3: true
+    ciphering:
+      EA1: true
+      EA2: true
+      EA3: true
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: 5g-core
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nrf
+  namespace: 5g-core
+spec:
+  selector:
+    app: nrf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: udr
+  namespace: 5g-core
+spec:
+  selector:
+    app: udr
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: udm
+  namespace: 5g-core
+spec:
+  selector:
+    app: udm
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ausf
+  namespace: 5g-core
+spec:
+  selector:
+    app: ausf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: amf
+  namespace: 5g-core
+spec:
+  selector:
+    app: amf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+    - name: ngap
+      port: 38412
+      protocol: SCTP
+      targetPort: 38412
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: upf
+  namespace: 5g-core
+spec:
+  selector:
+    app: upf
+  ports:
+    - name: pfcp
+      port: 8805
+      targetPort: 8805
+      protocol: UDP
+    - name: gtpu
+      port: 2152
+      targetPort: 2152
+      protocol: UDP
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: smf
+  namespace: 5g-core
+spec:
+  selector:
+    app: smf
+  ports:
+    - name: sbi
+      port: 7777
+      targetPort: 7777
+    - name: pfcp
+      port: 8805
+      targetPort: 8805
+      protocol: UDP
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb
+  namespace: 5g-core
+spec:
+  selector:
+    app: gnb
+  ports:
+    - name: ngap
+      port: 38412
+      protocol: SCTP
+      targetPort: 38412
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: 5g-core
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:6.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 27017
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nrf
+  namespace: 5g-core
+  labels:
+    app: nrf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nrf
+  template:
+    metadata:
+      labels:
+        app: nrf
+    spec:
+      containers:
+        - name: nrf
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-nrfd -c /open5gs/nrf.yaml"]
+          ports:
+            - containerPort: 7777
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/nrf.yaml
+              subPath: nrf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udr
+  namespace: 5g-core
+  labels:
+    app: udr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udr
+  template:
+    metadata:
+      labels:
+        app: udr
+    spec:
+      containers:
+        - name: udr
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-udrd -c /open5gs/udr.yaml"]
+          ports:
+            - containerPort: 7777
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/udr.yaml
+              subPath: udr.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udm
+  namespace: 5g-core
+  labels:
+    app: udm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udm
+  template:
+    metadata:
+      labels:
+        app: udm
+    spec:
+      containers:
+        - name: udm
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-udmd -c /open5gs/udm.yaml"]
+          ports:
+            - containerPort: 7777
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/udm.yaml
+              subPath: udm.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ausf
+  namespace: 5g-core
+  labels:
+    app: ausf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ausf
+  template:
+    metadata:
+      labels:
+        app: ausf
+    spec:
+      containers:
+        - name: ausf
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-ausfd -c /open5gs/ausf.yaml"]
+          ports:
+            - containerPort: 7777
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/ausf.yaml
+              subPath: ausf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amf
+  namespace: 5g-core
+  labels:
+    app: amf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: amf
+  template:
+    metadata:
+      labels:
+        app: amf
+    spec:
+      containers:
+        - name: amf
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-amfd -c /open5gs/amf.yaml"]
+          ports:
+            - containerPort: 7777
+            - containerPort: 38412
+              protocol: SCTP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/amf.yaml
+              subPath: amf.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upf
+  namespace: 5g-core
+  labels:
+    app: upf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: upf
+  template:
+    metadata:
+      labels:
+        app: upf
+    spec:
+      containers:
+        - name: upf
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["NET_ADMIN"]
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-upfd -c /open5gs/upf.yaml"]
+          ports:
+            - containerPort: 8805
+              protocol: UDP
+            - containerPort: 2152
+              protocol: UDP
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: tun-device
+              mountPath: /dev/net/tun
+            - name: config
+              mountPath: /open5gs/upf.yaml
+              subPath: upf.yaml
+      volumes:
+        - name: tun-device
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+        - name: config
+          configMap:
+            name: open5gs-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smf
+  namespace: 5g-core
+  labels:
+    app: smf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smf
+  template:
+    metadata:
+      labels:
+        app: smf
+    spec:
+      initContainers:
+        - name: setup-freediameter
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command: ["mkdir", "-p", "/open5gs/install/etc/freeDiameter"]
+          volumeMounts:
+            - name: freediameter-vol
+              mountPath: /open5gs/install/etc/freeDiameter
+        - name: copy-freediameter-config
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command: ["cp", "/freediameter-config/smf.conf", "/open5gs/install/etc/freeDiameter/smf.conf"]
+          volumeMounts:
+            - name: freediameter-config
+              mountPath: /freediameter-config
+            - name: freediameter-vol
+              mountPath: /open5gs/install/etc/freeDiameter
+      containers:
+        - name: smf
+          image: docker.io/gradiant/open5gs:2.7.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["open5gs-smfd -c /open5gs/smf.yaml"]
+          ports:
+            - containerPort: 7777
+            - containerPort: 8805
+              protocol: UDP
+            - containerPort: 2152
+              protocol: UDP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /open5gs/smf.yaml
+              subPath: smf.yaml
+            - name: freediameter-config
+              mountPath: /freediameter-config
+            - name: freediameter-vol
+              mountPath: /open5gs/install/etc/freeDiameter
+      volumes:
+        - name: config
+          configMap:
+            name: open5gs-config
+        - name: freediameter-config
+          configMap:
+            name: freediameter-config
+        - name: freediameter-vol
+          emptyDir: {}
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb
+  namespace: 5g-core
+  labels:
+    app: gnb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb
+  template:
+    metadata:
+      labels:
+        app: gnb
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: gnb
+          image: docker.io/gradiant/ueransim:3.2.6
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["nr-gnb -c /ueransim/gnb.yaml"]
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /ueransim/gnb.yaml
+              subPath: gnb.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: ueransim-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue
+  namespace: 5g-core
+  labels:
+    app: ue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ue
+  template:
+    metadata:
+      labels:
+        app: ue
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: ue
+          image: docker.io/gradiant/ueransim:3.2.6
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          command: ["/bin/sh", "-c"]
+          args: ["nr-ue -c /ueransim/ue.yaml"]
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /ueransim/ue.yaml
+              subPath: ue.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: ueransim-config
+---
+# Source: open5gs-ueransim/templates/stack.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: subscriber-bootstrap
+  namespace: 5g-core
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: mongo:6.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cat <<'EOF' >/tmp/subscriber.js
+              db = db.getSiblingDB('open5gs');
+              db.subscribers.updateOne(
+                { "imsi": "001010000000001" },
+                {
+                  "$set": {
+                    "imsi": "001010000000001",
+                    "subscribed_rau_tau_timer": 12,
+                    "network_access_mode": 0,
+                    "subscriber_status": 0,
+                    "access_restriction_data": 32,
+                    "slice": [{
+                      "sst": 1,
+                      "sd": "000001",
+                      "default_indicator": true,
+                      "session": [{
+                        "name": "internet",
+                        "type": 3,
+                        "pcc_rule": [],
+                        "ambr": {"uplink": {"value": 1, "unit": 3}, "downlink": {"value": 1, "unit": 3}},
+                        "qos": {"index": 9, "arp": {"priority_level": 8, "pre_emption_capability": 1, "pre_emption_vulnerability": 1}}
+                      }]
+                    }],
+                    "ambr": {"uplink": {"value": 1, "unit": 3}, "downlink": {"value": 1, "unit": 3}},
+                    "security": {
+                      "k": "465B5CE8B199B49FAA5F0A2EE238A6BC",
+                      "amf": "8000",
+                      "op": null,
+                      "opc": "E8ED289DEBA952E4283B54E88E6183CA"
+                    },
+                    "schema_version": 1,
+                    "__v": 0
+                  }
+                },
+                { upsert: true }
+              );
+              EOF
+              mongosh "mongodb://mongodb:27017/open5gs" /tmp/subscriber.js
