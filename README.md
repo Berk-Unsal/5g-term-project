@@ -20,15 +20,10 @@ This project deploys a containerized 5G core (Open5GS) and radio/UE simulation (
 ## Quick Start
 
 ```bash
-# 1) Deploy
-bash scripts/deploy.sh
-
-# 2) Check registration logs
-bash scripts/check_registration.sh
-
-# 3) Inspect resources
-kubectl get pods,svc -n 5g-core
+bash scripts/quickstart.sh
 ```
+
+This performs a clean start by removing any existing release and namespace, deploying fresh, waiting for the core components, and printing a registration check summary.
 
 ## Configuration
 
