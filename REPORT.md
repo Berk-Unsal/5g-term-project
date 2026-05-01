@@ -291,7 +291,40 @@ kubectl wait --namespace 5g-core \
   --for=condition=Available deployment/mongodb --timeout=300s
 ```
 
-### 7.3 Registration Verification
+### 7.3 Pod Status Snapshot (1 May 2026)
+
+The following snapshot shows the running pods after a successful deployment:
+
+```
+NAME                         READY   STATUS      RESTARTS   AGE
+amf-64db8b4dfb-98glm         1/1     Running     0          22m
+ausf-65d89c9547-wj4n9        1/1     Running     0          22m
+gnb-6f8dfbf97f-prhm2         1/1     Running     0          22m
+mongodb-97699cb47-5smcd      1/1     Running     0          22m
+nrf-7d85cd5d69-9vtq5         1/1     Running     0          22m
+smf-6648b4b66b-grxsq         1/1     Running     0          12m
+subscriber-bootstrap-7ghxv   0/1     Completed   1          22m
+udm-8474766b65-w5q72         1/1     Running     0          22m
+udr-68b8f569cc-66dbf         1/1     Running     0          3m5s
+ue-76c6f874df-57v7p          1/1     Running     0          22m
+upf-5f76d755f-7gzgq          1/1     Running     0          22m
+```
+
+**What each pod does:**
+
+- **amf**: Handles UE registration, mobility management, and NGAP signaling with the gNB.
+- **ausf**: Performs subscriber authentication during registration.
+- **gnb**: Simulated 5G base station (RAN) that connects UE to the core over NGAP.
+- **mongodb**: Stores subscriber profiles and runtime state for UDR/UDM.
+- **nrf**: Service registry for all network functions (SBI discovery).
+- **smf**: Creates and manages PDU sessions and controls PFCP with the UPF.
+- **subscriber-bootstrap**: One-time job that inserts the test subscriber into MongoDB.
+- **udm**: Stores subscriber data and provides it to the core during registration.
+- **udr**: Data repository that fronts MongoDB and serves UDM/AUSF queries.
+- **ue**: Simulated user equipment that registers and establishes a PDU session.
+- **upf**: User-plane data forwarding for PDU sessions (GTP-U).
+
+### 7.4 Registration Verification
 
 The `check_registration.sh` script verifies successful registration by examining logs:
 
